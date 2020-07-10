@@ -1,0 +1,100 @@
+#wanghong
+#Guizhou university
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import statsmodels.api as sm
+from statsmodels.tsa.arima_model import ARIMA
+from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.stattools import adfuller as ADF
+plt.rc('font', family='Times New Roman')
+
+###滑坡数据
+dateparse = lambda  dates: pd.datetime.strptime(dates, '%Y/%m')
+data = pd.read_csv('BZM_zg111.csv', parse_dates=['Date'], index_col='Date', date_parser=dateparse)
+
+print(data)
+sepRate = 0.8
+sepIndex = 70
+
+purchase_seq_train = data[:sepIndex]
+print(purchase_seq_train)
+purchase_seq_test = data[sepIndex:]
+print(purchase_seq_test)
+
+
+#差分函数
+def diff(timeseries):
+    timeseries_diff1 = timeseries.diff(1)
+    timeseries_diff2 = timeseries_diff1.diff(1)
+    timeseries_diff3 = timeseries_diff2.diff(1)
+
+    timeseries_diff1 = timeseries_diff1.fillna(0)
+    timeseries_diff2 = timeseries_diff2.fillna(0)
+    timeseries_diff3 = timeseries_diff3.fillna(0)
+
+
+
+    timeseries_adf = ADF(timeseries.values.tolist())
+    timeseries_diff1_adf = ADF(timeseries_diff1.values.tolist())
+    timeseries_diff2_adf = ADF(timeseries_diff2.values.tolist())
+    timeseries_diff3_adf = ADF(timeseries_diff3.values.tolist())
+
+
+    print('timeseries_adf : ', timeseries_adf)
+    print('timeseries_diff1_adf : ', timeseries_diff1_adf)
+    print('timeseries_diff2_adf : ', timeseries_diff2_adf)
+    print('timeseries_diff3_adf:', timeseries_diff3_adf)
+
+    plt.figure(figsize=(12, 8))
+    plt.plot(timeseries, label='Original', color='blue')
+    plt.plot(timeseries_diff1, label='Diff1', color='red')
+    plt.plot(timeseries_diff2, label='Diff2', color='purple')
+    plt.plot(timeseries_diff3, label = 'Diff3', color = 'green')
+    plt.legend(loc='best')
+    plt.show()
+
+
+# #ACF and PACF
+def autocorrelation(timeseries, lags):
+    fig = plt.figure(figsize=(12, 8))
+    ax1 = fig.add_subplot(211)
+    sm.graphics.tsa.plot_acf(timeseries, lags=lags, ax=ax1)
+    ax2 = fig.add_subplot(212)
+    sm.graphics.tsa.plot_pacf(timeseries, lags=lags, ax=ax2)
+    plt.show()
+
+
+
+# #STL分解
+def decomposing(timeseries):
+    decomposition = seasonal_decompose(timeseries)
+
+    trend = decomposition.trend
+    trend1 = pd.DataFrame(trend)
+    trend1.to_excel('BSH_DX01_trend1.xlsx')
+    seasonal = decomposition.seasonal
+    seasonal1 = pd.DataFrame(seasonal)
+    seasonal1.to_excel('BSH_DX01_seasonal1.xlsx')
+
+    residual = decomposition.resid
+    residual1 = pd.DataFrame(residual)
+    residual1.to_excel('BSH_DX01_res.xlsx')
+
+    plt.figure(figsize=(12, 8))
+    plt.subplot(411)
+    plt.plot(timeseries, label='Original', marker = 'o')
+    plt.legend(loc='best')
+    plt.subplot(412)
+    plt.plot(trend, label='Trend', marker = '<')
+    plt.legend(loc='best')
+    plt.subplot(413)
+    plt.plot(seasonal, label='Seasonarity', marker = 'p')
+    plt.legend(loc='best')
+    plt.subplot(414)
+    plt.plot(residual, label='Residual', marker = 's')
+    plt.legend(loc='best')
+    plt.show()
+
+decomposing(purchase_seq_train)
+
